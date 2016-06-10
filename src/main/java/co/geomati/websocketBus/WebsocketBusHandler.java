@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.websocket.OnClose;
@@ -13,6 +14,7 @@ import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -38,15 +40,27 @@ public class WebsocketBusHandler {
 	}
 
 	@OnMessage
-	public static void incoming(String message) {
-		JsonObject jsonMessage = (JsonObject) new JsonParser().parse(message);
-		String type = jsonMessage.get("type").getAsString();
-		logger.fine("Event received: " + type);
-		ArrayList<Callback> eventListeners = listeners.get(type);
-		if (eventListeners != null) {
-			for (Callback callback : eventListeners) {
-				callback.messageReceived(WebsocketBus.INSTANCE,
-						jsonMessage.get("payload"));
+	public void incoming(String message) {
+		try {
+			JsonObject jsonMessage = (JsonObject) new JsonParser()
+					.parse(message);
+			String type = jsonMessage.get("type").getAsString();
+			logger.fine("Event received: " + type);
+			ArrayList<Callback> eventListeners = listeners.get(type);
+			if (eventListeners != null) {
+				for (Callback callback : eventListeners) {
+					callback.messageReceived(WebsocketBus.INSTANCE,
+							jsonMessage.get("payload"));
+				}
+			}
+		} catch (Throwable t) {
+			JsonObject jsonError = new JsonObject();
+			jsonError.addProperty("error", true);
+			jsonError.addProperty("payload", t.getMessage());
+			try {
+				session.getBasicRemote().sendText(new Gson().toJson(jsonError));
+			} catch (IOException e) {
+				logger.log(Level.SEVERE, "Cannot send error message", e);
 			}
 		}
 	}

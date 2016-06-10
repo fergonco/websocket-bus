@@ -18,15 +18,18 @@ define([ "message-bus" ], function(bus) {
       socket = new WebSocket(uri);
       socket.onmessage = function(event) {
          var message = JSON.parse(event.data);
-         bus.send(message.type, [ message.payload ]);
+         if (message.error) {
+            bus.send("error", [ message.payload ]);
+         } else {
+            bus.send(message.type, [ message.payload ]);
+         }
       }
 
       socket.onclose = function(event) {
          bus.send("websocket-reconnect");
-         
-         setInterval(connect, 5000);
+         setTimeout(connect, 5000);
       }
-      socket.onopen= function(event) {
+      socket.onopen = function(event) {
          bus.send("websocket-connected");
       }
    }
