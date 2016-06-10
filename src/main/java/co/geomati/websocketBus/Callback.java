@@ -4,6 +4,6 @@ import com.google.gson.JsonElement;
 
 public interface Callback {
 
-	void messageReceived(JsonElement payload);
+	void messageReceived(WebsocketBus bus, JsonElement payload);
 
 }

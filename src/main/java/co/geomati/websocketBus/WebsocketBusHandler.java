@@ -21,10 +21,10 @@ import com.google.gson.JsonParser;
 public class WebsocketBusHandler {
 	private static Logger logger = Logger.getLogger("websocket handler");
 
-	private static HashMap<String, ArrayList<Callback>> listeners = new HashMap<>();
-
 	private static final Set<WebsocketBusHandler> handlers = new HashSet<WebsocketBusHandler>();
 	private Session session;
+
+	private static HashMap<String, ArrayList<Callback>> listeners = new HashMap<>();
 
 	@OnOpen
 	public synchronized void start(Session session) {
@@ -38,14 +38,15 @@ public class WebsocketBusHandler {
 	}
 
 	@OnMessage
-	public void incoming(String message) {
+	public static void incoming(String message) {
 		JsonObject jsonMessage = (JsonObject) new JsonParser().parse(message);
 		String type = jsonMessage.get("type").getAsString();
 		logger.fine("Event received: " + type);
 		ArrayList<Callback> eventListeners = listeners.get(type);
 		if (eventListeners != null) {
 			for (Callback callback : eventListeners) {
-				callback.messageReceived(jsonMessage.get("payload"));
+				callback.messageReceived(WebsocketBus.INSTANCE,
+						jsonMessage.get("payload"));
 			}
 		}
 	}
