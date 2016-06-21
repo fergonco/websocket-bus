@@ -49,18 +49,24 @@ public class WebsocketBusHandler {
 			ArrayList<Callback> eventListeners = listeners.get(type);
 			if (eventListeners != null) {
 				for (Callback callback : eventListeners) {
-					callback.messageReceived(WebsocketBus.INSTANCE,
-							jsonMessage.get("payload"));
+					try {
+						callback.messageReceived(new CallerImpl(session),
+								WebsocketBus.INSTANCE,
+								jsonMessage.get("payload"));
+					} catch (RuntimeException e) {
+						logger.log(Level.SEVERE,
+								"runtime exception in callback", e);
+					}
 				}
 			}
-		} catch (Throwable t) {
+		} catch (CallbackException e) {
 			JsonObject jsonError = new JsonObject();
 			jsonError.addProperty("error", true);
-			jsonError.addProperty("payload", t.getMessage());
+			jsonError.addProperty("payload", e.getMessage());
 			try {
 				session.getBasicRemote().sendText(new Gson().toJson(jsonError));
-			} catch (IOException e) {
-				logger.log(Level.SEVERE, "Cannot send error message", e);
+			} catch (IOException e1) {
+				logger.log(Level.SEVERE, "Cannot send error message", e1);
 			}
 		}
 	}
@@ -80,9 +86,7 @@ public class WebsocketBusHandler {
 
 	public static void broadcast(String eventName, JsonElement payload) {
 		logger.fine("Broadcasting");
-		JsonObject message = new JsonObject();
-		message.addProperty("type", eventName);
-		message.add("payload", payload);
+		JsonObject message = buildMessage(eventName, payload);
 		for (WebsocketBusHandler handler : handlers) {
 			try {
 				synchronized (handler) {
@@ -98,6 +102,35 @@ public class WebsocketBusHandler {
 				}
 			}
 		}
+	}
+
+	private static JsonObject buildMessage(String eventName, JsonElement payload) {
+		JsonObject message = new JsonObject();
+		message.addProperty("type", eventName);
+		message.add("payload", payload);
+		return message;
+	}
+
+	private class CallerImpl implements Caller {
+
+		private Session session;
+
+		public CallerImpl(Session session) {
+			this.session = session;
+		}
+
+		@Override
+		public void send(String eventName, JsonElement payload)
+				throws IOException {
+			JsonObject message = buildMessage(eventName, payload);
+			this.session.getBasicRemote().sendText(message.toString());
+		}
+
+		@Override
+		public Session getWebsocketSession() {
+			return session;
+		}
+
 	}
 
 }
