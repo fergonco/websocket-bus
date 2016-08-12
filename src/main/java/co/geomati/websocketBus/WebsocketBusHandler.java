@@ -21,7 +21,7 @@ import com.google.gson.JsonParser;
 
 @ServerEndpoint(value = "/websocket-bus-endpoint")
 public class WebsocketBusHandler {
-	private static Logger logger = Logger.getLogger("websocket handler");
+	private static Logger logger = Logger.getLogger("WebsocketBusHandler");
 
 	private static final Set<WebsocketBusHandler> handlers = new HashSet<WebsocketBusHandler>();
 	private Session session;
@@ -41,6 +41,7 @@ public class WebsocketBusHandler {
 
 	@OnMessage
 	public void incoming(String message) {
+		Caller caller = new CallerImpl(session);
 		try {
 			JsonObject jsonMessage = (JsonObject) new JsonParser()
 					.parse(message);
@@ -50,9 +51,8 @@ public class WebsocketBusHandler {
 			if (eventListeners != null) {
 				for (Callback callback : eventListeners) {
 					try {
-						callback.messageReceived(new CallerImpl(session),
-								WebsocketBus.INSTANCE,
-								jsonMessage.get("payload"));
+						callback.messageReceived(caller, WebsocketBus.INSTANCE,
+								type, jsonMessage.get("payload"));
 					} catch (RuntimeException e) {
 						logger.log(Level.SEVERE,
 								"runtime exception in callback", e);
@@ -60,14 +60,7 @@ public class WebsocketBusHandler {
 				}
 			}
 		} catch (CallbackException e) {
-			JsonObject jsonError = new JsonObject();
-			jsonError.addProperty("error", true);
-			jsonError.addProperty("payload", e.getMessage());
-			try {
-				session.getBasicRemote().sendText(new Gson().toJson(jsonError));
-			} catch (IOException e1) {
-				logger.log(Level.SEVERE, "Cannot send error message", e1);
-			}
+			caller.sendError(e.getMessage());
 		}
 	}
 
@@ -120,10 +113,27 @@ public class WebsocketBusHandler {
 		}
 
 		@Override
+		public void sendError(String message) {
+			JsonObject jsonError = new JsonObject();
+			jsonError.addProperty("error", true);
+			jsonError.addProperty("payload", message);
+			synchronized (session) {
+				try {
+					session.getBasicRemote().sendText(
+							new Gson().toJson(jsonError));
+				} catch (IOException e1) {
+					logger.log(Level.SEVERE, "Cannot send error message", e1);
+				}
+			}
+		}
+
+		@Override
 		public void send(String eventName, JsonElement payload)
 				throws IOException {
 			JsonObject message = buildMessage(eventName, payload);
-			this.session.getBasicRemote().sendText(message.toString());
+			synchronized (session) {
+				this.session.getBasicRemote().sendText(message.toString());
+			}
 		}
 
 		@Override

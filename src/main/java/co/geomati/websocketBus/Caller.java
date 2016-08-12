@@ -12,4 +12,6 @@ public interface Caller {
 
 	Session getWebsocketSession();
 
+	public abstract void sendError(String message);
+
 }

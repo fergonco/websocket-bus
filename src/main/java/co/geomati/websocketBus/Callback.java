@@ -11,6 +11,10 @@ public interface Callback {
 	 *            Origin of the message
 	 * @param bus
 	 *            interface to interact with the bus
+	 * @param eventName
+	 *            Type of the message. The eventName used when registering the
+	 *            callback in {@link WebsocketBus@#addListener(String,
+	 *            Callback)}
 	 * @param payload
 	 *            Content of the message
 	 * @throws CallbackException
@@ -21,7 +25,7 @@ public interface Callback {
 	 *             not be sent to the other endpoint, only log the problem
 	 *             internally and do nothing else
 	 */
-	void messageReceived(Caller caller, WebsocketBus bus, JsonElement payload)
-			throws CallbackException, InternalLogException;
+	void messageReceived(Caller caller, WebsocketBus bus, String eventName,
+			JsonElement payload) throws CallbackException, InternalLogException;
 
 }
