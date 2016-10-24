@@ -43,19 +43,16 @@ public class WebsocketBusHandler {
 	public void incoming(String message) {
 		Caller caller = new CallerImpl(session);
 		try {
-			JsonObject jsonMessage = (JsonObject) new JsonParser()
-					.parse(message);
+			JsonObject jsonMessage = (JsonObject) new JsonParser().parse(message);
 			String type = jsonMessage.get("type").getAsString();
 			logger.fine("Event received: " + type);
 			ArrayList<Callback> eventListeners = listeners.get(type);
 			if (eventListeners != null) {
 				for (Callback callback : eventListeners) {
 					try {
-						callback.messageReceived(caller, WebsocketBus.INSTANCE,
-								type, jsonMessage.get("payload"));
+						callback.messageReceived(caller, WebsocketBus.INSTANCE, type, jsonMessage.get("payload"));
 					} catch (RuntimeException e) {
-						logger.log(Level.SEVERE,
-								"runtime exception in callback", e);
+						logger.log(Level.SEVERE, "runtime exception in callback", e);
 					}
 				}
 			}
@@ -66,8 +63,7 @@ public class WebsocketBusHandler {
 
 	public static void addListener(String eventName, Callback callback) {
 		ArrayList<Callback> eventListeners = listeners.get(eventName);
-		eventListeners = eventListeners != null ? eventListeners
-				: new ArrayList<Callback>();
+		eventListeners = eventListeners != null ? eventListeners : new ArrayList<Callback>();
 		eventListeners.add(callback);
 		listeners.put(eventName, eventListeners);
 	}
@@ -83,8 +79,7 @@ public class WebsocketBusHandler {
 		for (WebsocketBusHandler handler : handlers) {
 			try {
 				synchronized (handler) {
-					handler.session.getBasicRemote().sendText(
-							message.toString());
+					handler.session.getBasicRemote().sendText(message.toString());
 				}
 			} catch (IOException e) {
 				handlers.remove(handler);
@@ -119,8 +114,7 @@ public class WebsocketBusHandler {
 			jsonError.addProperty("payload", message);
 			synchronized (session) {
 				try {
-					session.getBasicRemote().sendText(
-							new Gson().toJson(jsonError));
+					session.getBasicRemote().sendText(new Gson().toJson(jsonError));
 				} catch (IOException e1) {
 					logger.log(Level.SEVERE, "Cannot send error message", e1);
 				}
@@ -128,8 +122,7 @@ public class WebsocketBusHandler {
 		}
 
 		@Override
-		public void send(String eventName, JsonElement payload)
-				throws IOException {
+		public void send(String eventName, JsonElement payload) throws IOException {
 			JsonObject message = buildMessage(eventName, payload);
 			synchronized (session) {
 				this.session.getBasicRemote().sendText(message.toString());
