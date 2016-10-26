@@ -53,10 +53,12 @@ public class WebsocketBusHandler {
 						callback.messageReceived(caller, WebsocketBus.INSTANCE, type, jsonMessage.get("payload"));
 					} catch (RuntimeException e) {
 						logger.log(Level.SEVERE, "runtime exception in callback", e);
+						caller.sendError("runtime exception. contact administrator.");
 					}
 				}
 			}
 		} catch (CallbackException e) {
+			logger.log(Level.SEVERE, "callback exception in callback", e);
 			caller.sendError(e.getMessage());
 		}
 	}
